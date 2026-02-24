@@ -1,0 +1,20 @@
+meta {
+  name: Game By Id
+  type: http
+  seq: 6
+}
+
+post {
+  url: https://api.igdb.com/v4/games
+  body: text
+  auth: inherit
+}
+
+body:text {
+   fields id, name, game_status.status,franchise; where id = (11169); limit 100; offset 0; sort id asc;
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

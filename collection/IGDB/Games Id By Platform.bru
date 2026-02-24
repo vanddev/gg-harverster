@@ -1,0 +1,20 @@
+meta {
+  name: Games Id By Platform
+  type: http
+  seq: 5
+}
+
+post {
+  url: https://api.igdb.com/v4/games
+  body: text
+  auth: inherit
+}
+
+body:text {
+  fields id; where platforms = (38) & game_type=(0,1,2,4,8,9,10,11); limit 100; offset 0; sort id asc;
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Game Types
+  type: http
+  seq: 3
+}
+
+post {
+  url: https://api.igdb.com/v4/game_types
+  body: text
+  auth: inherit
+}
+
+body:text {
+  fields id,type; limit 100; sort id asc;
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Auth
+  type: http
+  seq: 1
+}
+
+post {
+  url: https://id.twitch.tv/oauth2/token?client_id={{CLIENT_ID}}&client_secret={{CLIENT_SECRET}}&grant_type=client_credentials
+  body: none
+  auth: inherit
+}
+
+params:query {
+  client_id: {{CLIENT_ID}}
+  client_secret: {{CLIENT_SECRET}}
+  grant_type: client_credentials
+}
+
+script:post-response {
+  let data = res.body;
+  bru.setEnvVar("token", data.access_token);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

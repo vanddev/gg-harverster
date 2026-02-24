@@ -1,0 +1,20 @@
+meta {
+  name: Platform By Name
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://api.igdb.com/v4/platforms
+  body: text
+  auth: inherit
+}
+
+body:text {
+  fields id,abbreviation,alternative_name,name,platform_logo; where name = "PSP" | abbreviation = "PSP" | alternative_name = "PSP";
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

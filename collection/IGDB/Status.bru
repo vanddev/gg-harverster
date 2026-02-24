@@ -1,0 +1,20 @@
+meta {
+  name: Status
+  type: http
+  seq: 9
+}
+
+post {
+  url: https://api.igdb.com/v4/themes
+  body: text
+  auth: inherit
+}
+
+body:text {
+  fields *; limit 100;
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

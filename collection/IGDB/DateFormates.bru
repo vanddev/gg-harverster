@@ -1,0 +1,20 @@
+meta {
+  name: DateFormates
+  type: http
+  seq: 7
+}
+
+post {
+  url: https://api.igdb.com/v4/release_date_statuses
+  body: text
+  auth: inherit
+}
+
+body:text {
+  fields id, m, y, release_region.region, status.name, game, platform; where id = (373332); limit 1; offset 0; sort id asc;
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
