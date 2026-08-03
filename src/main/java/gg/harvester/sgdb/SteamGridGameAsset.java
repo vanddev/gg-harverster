@@ -1,4 +1,4 @@
 package gg.harvester.sgdb;
 
-public class SteamGridGameAsset {
+public record SteamGridGameAsset(Integer gameId, String cover, String hero, String logo) {
 }

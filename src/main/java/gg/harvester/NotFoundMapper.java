@@ -1,13 +1,17 @@
 package gg.harvester;
 
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.ext.ResponseExceptionMapper;
 
-public class NotFoundMapper implements ResponseExceptionMapper {
+public class NotFoundMapper implements ResponseExceptionMapper<RuntimeException> {
   @Override
-  public Throwable toThrowable(Response response) {
-    return null;
+  public RuntimeException toThrowable(Response response) {
+      if (response.getStatus() == 404) {
+        return new NotFoundException();
+      }
+      return null;
   }
 
   @Override
@@ -17,6 +21,6 @@ public class NotFoundMapper implements ResponseExceptionMapper {
 
   @Override
   public boolean handles(int status, MultivaluedMap headers) {
-    return ResponseExceptionMapper.super.handles(status, headers);
+    return status == 404;
   }
 }

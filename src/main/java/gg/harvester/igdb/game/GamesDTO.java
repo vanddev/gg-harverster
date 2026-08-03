@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import gg.harvester.igdb.ImageDTO;
 import gg.harvester.igdb.SimpleDTO;
 import gg.harvester.igdb.agerating.AgeRatingDTO;
+import gg.harvester.igdb.externalgame.ExternalGameDTO;
 import gg.harvester.igdb.gamestatus.GameStatusDTO;
 import gg.harvester.igdb.gametype.GameTypesDTO;
 import gg.harvester.igdb.platform.PlatformDTO;
@@ -49,7 +50,9 @@ public record GamesDTO(
         List<SimpleDTO> keywords,
         List<SimpleDTO> franchises,
         @JsonProperty("franchise")
-        SimpleDTO mainFranchise
+        SimpleDTO mainFranchise,
+        @JsonProperty("external_games")
+        List<ExternalGameDTO> externalGames
 ) {
 
 }

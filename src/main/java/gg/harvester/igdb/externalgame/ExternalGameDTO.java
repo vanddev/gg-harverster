@@ -1,4 +1,12 @@
 package gg.harvester.igdb.externalgame;
 
-public class ExternalGame {
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record ExternalGameDTO(
+    String uid,
+
+    @JsonProperty("external_game_source")
+    Integer externalGameSource
+) {
+
 }

@@ -1,9 +1,12 @@
 package gg.harvester.sgdb;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 import java.util.List;
 
-public class SteamGridListResponse<T> {
+@RegisterForReflection
+public class SteamGridGameListResponse {
 
     public boolean success;
-    public List<T> data;
+    public List<SteamGridGame> data;
 }

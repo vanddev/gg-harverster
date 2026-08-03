@@ -1,0 +1,20 @@
+meta {
+  name: External Games
+  type: http
+  seq: 10
+}
+
+post {
+  url: https://api.igdb.com/v4/external_games
+  body: text
+  auth: inherit
+}
+
+body:text {
+  fields *; where game = (347668); limit 100;
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

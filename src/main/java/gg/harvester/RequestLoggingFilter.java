@@ -25,9 +25,8 @@ public class RequestLoggingFilter implements ClientRequestFilter, ClientResponse
     // === REQUEST ===
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
-        if (!logEnabled) return;
-        String contentType = requestContext.getHeaderString("Content-Type");
-        // Intercepta o body antes de enviar
+        if (!logEnabled || !requestContext.getUri().getHost().contains("steamgriddb.com")) return;
+      // Intercepta o body antes de enviar
         if (requestContext.hasEntity()) {
             String body = requestContext.getEntity().toString();
             Log.infof("➡️  Request: %s %s\nBody: %s\n",
@@ -43,7 +42,7 @@ public class RequestLoggingFilter implements ClientRequestFilter, ClientResponse
     // === RESPONSE ===
     @Override
     public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
-        if (!logEnabled) return;
+        if (!logEnabled || !requestContext.getUri().getHost().contains("steamgriddb.com")) return;
         String body = null;
         if (responseContext.hasEntity()) {
             try (InputStream in = responseContext.getEntityStream()) {

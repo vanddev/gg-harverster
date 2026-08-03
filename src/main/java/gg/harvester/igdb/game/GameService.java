@@ -1,6 +1,6 @@
 package gg.harvester.igdb.game;
 
-import gg.harvester.SyncReport;
+import gg.harvester.ConsoleProgressBar;
 import gg.harvester.igdb.*;
 import gg.harvester.igdb.agerating.AgeRating;
 import gg.harvester.igdb.agerating.AgeRatingDTO;
@@ -20,14 +20,19 @@ import gg.harvester.igdb.platform.PlatformDTO;
 import gg.harvester.igdb.platform.PlatformService;
 import gg.harvester.igdb.release.Release;
 import gg.harvester.igdb.theme.Theme;
+import gg.harvester.sgdb.SteamGridService;
 import io.quarkus.hibernate.orm.panache.Panache;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import me.tongfei.progressbar.ProgressBar;
+import me.tongfei.progressbar.ProgressBarStyle;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
+import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -36,6 +41,7 @@ public class GameService {
     private final GameClient gameClient;
     private final GametypeService gametypeService;
     private final GamestatusService gamestatusService;
+    private final SteamGridService steamGridService;
     private final GameRepository repository;
     private final List<String> ALLOWED_GAME_TYPE = List.of(
         "Main Game",
@@ -51,10 +57,12 @@ public class GameService {
             GameRepository repository,
             PlatformService platformService,
             GametypeService gametypeService,
-            GamestatusService gamestatusService) {
+            GamestatusService gamestatusService,
+            SteamGridService steamGridService) {
         this.platformService = platformService;
         this.gametypeService = gametypeService;
         this.gamestatusService = gamestatusService;
+        this.steamGridService = steamGridService;
         this.gameClient = gameClient;
         this.repository = repository;
     }
@@ -71,28 +79,36 @@ public class GameService {
         var added = 0;
         var skipped = 0;
 
-        while (processed < total) {
-            var games = fetchGameByPlatform(platform.id, processed);
+        try(ConsoleProgressBar progressBar = new ConsoleProgressBar("Syncing games...", total)){
 
-            if (games.isEmpty()) break;
+          while (processed < total) {
+              var games = fetchGameByPlatform(platform.id, processed);
 
-            var gamesAllowed = filterGamesAllowed(games);
+              if (games.isEmpty()) break;
 
-            skipped += games.size() - gamesAllowed.size();
+              var gamesAllowed = filterGamesAllowed(games);
 
-            var report = syncGames(gamesAllowed);
+              skipped += games.size() - gamesAllowed.size();
 
-            assert report != null;
-            processed += games.size();
-            added += report.added();
-            skipped += report.skipped();
+              var persistedNewGames = syncGames(gamesAllowed);
 
-            var pct = String.format("%.2f%%", ((double) processed / total) * 100);
-            Log.infof("Imported %s of %d", pct, total);
+
+              processed += games.size();
+              added += persistedNewGames.size();
+              skipped += gamesAllowed.size() - persistedNewGames.size();
+
+              progressBar.stepBy(games.size());
+
+              var pct = String.format("%.2f%%", ((double) processed / total) * 100);
+              Log.infof("Synced %d / %d", processed, total);
+          }
+        } catch (IOException e ){
+          Log.error("An error occurred", e);
+          System.exit(1);
         }
 
         long elapsed = System.currentTimeMillis() - start;
-        System.out.printf("Import completed: added=%d, skipped=%d, duration=%dms%n", added, skipped, elapsed);
+        System.out.printf("Import completed: added=%d, skipped=%d, duration=%dm%n", added, skipped, TimeUnit.MILLISECONDS.toMinutes(elapsed));
     }
 
     private ArrayList<GamesDTO> filterGamesAllowed(List<GamesDTO> games) {
@@ -107,13 +123,13 @@ public class GameService {
     }
 
     @Transactional
-    public SyncReport syncGames(List<GamesDTO> dtos) {
+    public List<Game> syncGames(List<GamesDTO> dtos) {
         var dtoIds = dtos.stream().map(GamesDTO::id).toList();
         List<Integer> persistedIds = repository.findGameIds(dtoIds);
 
         Log.infof("Found %d games in database", persistedIds.size());
 
-        if (persistedIds.size() == dtos.size()) return new SyncReport(dtos.size(), 0, dtos.size());
+        if (persistedIds.size() == dtos.size()) return Collections.emptyList();
 
         List<GamesDTO> gamesToPersist = dtos.stream()
                 .filter(dto -> !persistedIds.contains(dto.id())).toList();
@@ -124,11 +140,12 @@ public class GameService {
         Map<String, Map<Integer, ? extends BaseEntity>> persistedData = persistAllGameData(Panache.getEntityManager(), gamesToPersist);
 
         var games = buildGamesFromDTO(dtos, persistedData);
-
+        loadMediaAssets(games);
         repository.persist(games);
         Log.infof("Persisted %d new Games entities", games.size());
 
-        return new SyncReport(dtos.size(), gamesToPersist.size(), dtos.size() - gamesToPersist.size());
+        return games;
+
     }
 
     private List<Game> buildGamesFromDTO(
@@ -277,5 +294,41 @@ public class GameService {
         ));
     }
 
+    private void loadMediaAssets(List<Game> games) {
+      Log.info("Starting loading games assets...");
+      int total = games.size();
+
+      ProgressBar progressBar = ProgressBar.builder().setTaskName("Loading assets...").setInitialMax(total).setStyle(ProgressBarStyle.ASCII).build();
+      ExecutorService executor = Executors.newFixedThreadPool(10);
+      CompletionService<Void> completionService = new ExecutorCompletionService<>(executor);
+      for (Game game : games) {
+        completionService.submit(() -> {
+          var assets = steamGridService.GetGameAsset(
+            game.id,
+            game.name,
+            game.steamAppId != null ? Integer.valueOf(game.steamAppId) : null
+          );
+          if (game.cover == null) {
+            game.cover = assets.cover();
+          }
+          game.hero = assets.hero();
+          game.logo = assets.logo();
+          return null;
+        });
+      }
+      try {
+        for (int i = 0; i < total; i++) {
+          completionService.take(); // blocks until next finishes
+          progressBar.step();
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        Log.errorf("Load assets interrupted: %e", e);
+      } finally {
+        progressBar.close();
+        executor.shutdown();
+      }
+      Log.info("Game assets loaded");
+    }
 
 }

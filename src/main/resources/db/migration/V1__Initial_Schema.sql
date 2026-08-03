@@ -67,6 +67,8 @@ CREATE TABLE game (
     gamestatus_id INTEGER,
     igdb_url TEXT,
     cover TEXT,
+    logo TEXT,
+    hero TEXT,
     first_release_date INTEGER,
     players_rating REAL,
     players_rating_count INTEGER,
@@ -74,7 +76,6 @@ CREATE TABLE game (
     critics_rating_count INTEGER,
     rating REAL,
     rating_count INTEGER,
-    rating_ration REAL,
     FOREIGN KEY (gametype_id) REFERENCES gametype(id),
     FOREIGN KEY (gamestatus_id) REFERENCES gamestatus(id)
 );

@@ -68,7 +68,7 @@ public class GameServiceTest {
     }
 
     @Test
-    void syncGames_whenAllGamesAlreadyPersisted_returnsCorrectSyncReport() {
+    void syncGames_whenAllGamesAlreadyPersisted_returnsEmptyList() {
         // Arrange
         GameTypesDTO gameType = new GameTypesDTO(0, "Main Game");
         ReleasesDTO release = new ReleasesDTO(1, null, 1, 1, null, 1234567890);
@@ -79,13 +79,11 @@ public class GameServiceTest {
         when(repository.findGameIds(List.of(1, 2))).thenReturn(List.of(1, 2));
 
         // Act
-        SyncReport result = gameService.syncGames(dtos);
+        List<Game> result = gameService.syncGames(dtos);
 
         // Assert
         assertNotNull(result);
-        assertEquals(2, result.processed());
-        assertEquals(0, result.added());
-        assertEquals(2, result.skipped());
+        assertEquals(0, result.size());
         verify(repository, never()).persist(any(Game.class));
         verify(repository, never()).persist(any(Iterable.class));
     }
@@ -119,13 +117,11 @@ public class GameServiceTest {
                 when(gamestatusService.findReleasedStatus()).thenReturn(releasedStatus);
 
                 // Act
-                SyncReport result = gameService.syncGames(dtos);
+                List<Game> result = gameService.syncGames(dtos);
 
                 // Assert
                 assertNotNull(result);
-                assertEquals(1, result.processed());
-                assertEquals(1, result.added());
-                assertEquals(0, result.skipped());
+                assertEquals(1, result.size());
                 verify(repository, atLeastOnce()).persist(any(Iterable.class));
             }
         }
@@ -160,13 +156,11 @@ public class GameServiceTest {
                 when(gamestatusService.findReleasedStatus()).thenReturn(releasedStatus);
 
                 // Act
-                SyncReport result = gameService.syncGames(dtos);
+                List<Game> result = gameService.syncGames(dtos);
 
                 // Assert
                 assertNotNull(result);
-                assertEquals(2, result.processed());
-                assertEquals(1, result.added());
-                assertEquals(1, result.skipped());
+                assertEquals(1, result.size());
                 verify(repository, atLeastOnce()).persist(any(Iterable.class));
             }
         }
@@ -349,7 +343,8 @@ public class GameServiceTest {
                 null,                            // themes
                 null,                            // keywords
                 null,                            // franchises
-                null                             // mainFranchise
+                null,                            // mainFranchise,
+                null                             // External Games
         );
     }
 
